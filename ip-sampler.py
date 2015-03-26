@@ -56,16 +56,11 @@ def main(args):
         p.join()
 
     print '[*] {0}% of total online hosts:'.format(str(percent * 100))
-    with open('SampleIPs.txt', 'r') as f:
-        print f.read()
-
-    #for netblock in netblocks:
-    #    proc = pool.apply_async(worker, (netblock, percent))
-    #    proc.daemon = False
-    #    procs.append(proc)
-    ##pool.close()
-    #for proc in procs:
-    #    print proc.get()
+    if os.path.isfile('SampleIPs.txt'):
+        with open('SampleIPs.txt', 'r') as f:
+            print f.read()
+    else:
+        print '[-] No online hosts found'
 
 def worker(q, lock, percent):
     '''
@@ -91,9 +86,7 @@ def worker(q, lock, percent):
                 hostname = None
                 if len(host.hostnames) != 0:
                     hostname = host.hostnames[0]
-                print ip, hostname
-                if hostname:
-                    subnet_hosts_up.append(ip)
+                subnet_hosts_up.append(ip)
 
         num_hosts = float(len(subnet_hosts_up))
         random_sample_num = int(ceil(num_hosts * percent))
