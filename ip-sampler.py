@@ -20,7 +20,7 @@ def parse_args():
 
 def main(args):
     '''
-    Set up asynch workers then print final results
+    Set up async workers then print final results
     '''
     procs = []
     lock = Lock()
@@ -70,7 +70,7 @@ def worker(q, lock, percent):
     of the hosts that are up to the master sample list
     '''
     for netblock in iter(q.get, 'STOP'):
-        nmap_args = '-T4 -Pn --max-rtt-timeout 150ms --max-retries 3'
+        nmap_args = '-T4 -sn --max-rtt-timeout 150ms --max-retries 3'
         print '[*] nmap {0} {1}'.format(nmap_args, netblock)
         nmap_proc = NmapProcess(targets=netblock, options=nmap_args)
         rc = nmap_proc.run()
@@ -88,6 +88,7 @@ def worker(q, lock, percent):
                 hostname = None
                 if len(host.hostnames) != 0:
                     hostname = host.hostnames[0]
+                print ip, hostname
                 if hostname:
                     subnet_hosts_up.append(ip)
 
