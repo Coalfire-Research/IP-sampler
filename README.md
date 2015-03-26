@@ -1,6 +1,6 @@
 ## IP-sampler
 
-Give the script a newline separated list of subnets and it will scan each subnet for live hosts then write a certain percentage (5% by default) of live IPs from each subnet to a SampleIPs.txt.
+Give the script a newline separated list of subnets and it will scan each subnet for live hosts then write a certain percentage (5% by default) of random live IPs from each subnet to a SampleIPs.txt.
 
 
 #### Usage
