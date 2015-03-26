@@ -1,7 +1,8 @@
 #! /usr/bin/env python2
 
-import sys
 import os
+import re
+import sys
 import argparse
 import random
 import signal
@@ -16,6 +17,7 @@ def parse_args():
     parser.add_argument("-l", "--hostlist", help="Enter the hosts list file")
     parser.add_argument("-p", "--percent", default=5, type=float, help="Enter the percent of IPs per netblock to sample")
     parser.add_argument("-w", "--workers", default=10, type=int, help="Enter the number of paralell workers")
+    parser.add_argument("--portscan", action="store_true", help="Instead of doing an ICMP ping sweep, check for at least one of the top 5 ports to respond with SYN/ACK")
     return parser.parse_args()
 
 def main(args):
@@ -25,6 +27,7 @@ def main(args):
     procs = []
     lock = Lock()
     q = Queue()
+    pingtype = args.portscan
     percent = args.percent / float(100)
 
     if not args.hostlist:
@@ -33,21 +36,15 @@ def main(args):
     hosts_list = open(args.hostlist, 'r').readlines()
 
     # Create list of netblocks
-    #netblocks =[]
     for l in hosts_list:
         l = l.strip()
         q.put(l)
-        #netblocks.append(l)
 
-    # Set max number of workers
-    #pool = Pool(args.workers)
-
-    procs = []
     # Can't use Pool because pool makes process daemonic which can't produce children
     # NmapProcess is a child of the worker process
+    procs = []
     for w in xrange(args.workers):
-        p = Process(target=worker, args=(q, lock, percent))
-        #p.daemon = True
+        p = Process(target=worker, args=(q, lock, percent, pingtype))
         p.start()
         procs.append(p)
         q.put('STOP')
@@ -55,20 +52,21 @@ def main(args):
     for p in procs:
         p.join()
 
-    print '[*] {0}% of total online hosts:'.format(str(percent * 100))
     if os.path.isfile('SampleIPs.txt'):
-        with open('SampleIPs.txt', 'r') as f:
-            print f.read()
+        print '[+] Check SampleIPs.txt for a random {0}% sample of total online hosts'.format(str(percent * 100))
     else:
         print '[-] No online hosts found'
 
-def worker(q, lock, percent):
+def worker(q, lock, percent, pingtype):
     '''
     Create Nmap processes to ping sweep each subnet then add a percentage
     of the hosts that are up to the master sample list
     '''
     for netblock in iter(q.get, 'STOP'):
-        nmap_args = '-T4 -PE -sn --max-rtt-timeout 150ms --max-retries 3'
+        if pingtype:
+            nmap_args = '--top-ports 5 --max-rtt-timeout 150ms --max-retries 3'
+        else:
+            nmap_args = '-T4 -PE -sn --max-rtt-timeout 150ms --max-retries 3'
         print '[*] nmap {0} {1}'.format(nmap_args, netblock)
         nmap_proc = NmapProcess(targets=netblock, options=nmap_args)
         rc = nmap_proc.run()
@@ -86,7 +84,13 @@ def worker(q, lock, percent):
                 hostname = None
                 if len(host.hostnames) != 0:
                     hostname = host.hostnames[0]
-                subnet_hosts_up.append(ip)
+                if pingtype:
+                    for s in host.services:
+                        if re.search('open|filtered', s.state):
+                            subnet_hosts_up.append(ip)
+                            break
+                else:
+                    subnet_hosts_up.append(ip)
 
         num_hosts = float(len(subnet_hosts_up))
         random_sample_num = int(ceil(num_hosts * percent))
