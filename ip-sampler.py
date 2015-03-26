@@ -39,6 +39,7 @@ def main(args):
     for l in hosts_list:
         l = l.strip()
         q.put(l)
+    q.put(None)
 
     # Can't use Pool because pool makes process daemonic which can't produce children
     # NmapProcess is a child of the worker process
@@ -47,7 +48,6 @@ def main(args):
         p = Process(target=worker, args=(q, lock, percent, pingtype))
         p.start()
         procs.append(p)
-        q.put('STOP')
 
     for p in procs:
         p.join()
@@ -62,7 +62,11 @@ def worker(q, lock, percent, pingtype):
     Create Nmap processes to ping sweep each subnet then add a percentage
     of the hosts that are up to the master sample list
     '''
-    for netblock in iter(q.get, 'STOP'):
+    while True:
+        netblock = q.get()
+        if netblock == None:
+            return
+
         if pingtype:
             nmap_args = '--top-ports 5 --max-rtt-timeout 150ms --max-retries 3'
         else:
@@ -75,7 +79,7 @@ def worker(q, lock, percent, pingtype):
             report = NmapParser.parse(xml)
         except NmapParserException as e:
             print 'Exception raised while parsing scan: {0}'.format(e.msg)
-            return
+            continue
 
         subnet_hosts_up = []
         for host in report.hosts:
