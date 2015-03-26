@@ -27,6 +27,9 @@ def main(args):
     q = Queue()
     percent = args.percent / float(100)
 
+    if not args.hostlist:
+        sys.exit('[-] Enter a hostlist file using the -l flag')
+
     hosts_list = open(args.hostlist, 'r').readlines()
 
     # Create list of netblocks
@@ -70,7 +73,7 @@ def worker(q, lock, percent):
     of the hosts that are up to the master sample list
     '''
     for netblock in iter(q.get, 'STOP'):
-        nmap_args = '-T4 -sn --max-rtt-timeout 150ms --max-retries 3'
+        nmap_args = '-T4 -PE -sn --max-rtt-timeout 150ms --max-retries 3'
         print '[*] nmap {0} {1}'.format(nmap_args, netblock)
         nmap_proc = NmapProcess(targets=netblock, options=nmap_args)
         rc = nmap_proc.run()
