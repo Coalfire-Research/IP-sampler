@@ -1,5 +1,11 @@
 ## IP-sampler
 
+Give the script a newline separated list of subnets and it will scan each subnet for live hosts then write a certain percentage (5% by default) of live IPs from each subnet to a SampleIPs.txt.
+
+
+#### Usage
+
+
 Run an ICMP ping sweep against all subnets in hostlist.txt, then take a 5% sample from of all the hosts that are up within each subnet and write them to SampleIPs.txt
 
 ```./ip-sampler.py -l hostlist.txt```
